@@ -40,9 +40,6 @@ cache/
 # Shiny application logs
 *.log
 
-# Data files
-data/
-
 # Quarto files
 *.qmd
 
