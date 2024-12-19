@@ -24,11 +24,19 @@ nom_arret <- geo_data %>% st_drop_geometry() %>%
   summarise(nom_lda = first(nom_lda)) %>%
   select(idrefa_lda, nom_lda)
 
-val_lda <- validations %>% group_by(ID_REFA_LDA) %>%
+# Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
+centroid_lda <- geo_data %>%
+  group_by(idrefa_lda) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  st_centroid()
+
+
+total_val_lda <- validations %>% group_by(ID_REFA_LDA) %>%
   summarise(total_val = sum(NB_VALD)) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda"))
 
-val_lda %>% filter(ID_REFA_LDA != 0) %>%
+# TOP 20 of LDA
+total_val_lda %>% filter(ID_REFA_LDA != 0) %>%
   arrange(desc(total_val)) %>%
   head(20) %>%
   ggplot(aes(x = reorder(nom_lda, total_val), y = total_val)) +
@@ -39,6 +47,28 @@ val_lda %>% filter(ID_REFA_LDA != 0) %>%
        x = "Nom LDA",
        y = "Nombre de validations")
 
-# map of total validations per LDA (no sense)
-map =  val_lda %>% left_join(geo_data,by = c("ID_REFA_LDA" = "idrefa_lda")) %>% st_as_sf() %>% st_centroid()
-ggplot(map)+geom_sf(aes(size=total_val),color="red")+scale_size_area(max_size = 4)
+
+# TODO : MAP -> ajouter un fond !!
+# map of avg validation per day per LDA
+day_avg_val_lda <- validations %>% group_by(ID_REFA_LDA, JOUR) %>%
+  summarise(total_val = sum(NB_VALD)) %>% # TOTAL de validation par LDA par jour (car LDA = plusieurs arrêts)
+  group_by(ID_REFA_LDA) %>%
+  summarise(avg_val = mean(total_val)) # Moyenne de validation par LDA
+
+map = day_avg_val_lda %>%
+  left_join(centroid_lda, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
+  left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
+  st_as_sf()
+
+ggplot(map)+geom_sf(aes(size=avg_val),color="red")+scale_size_area(max_size = 4)
+
+# zoom on Paris
+map_name_top = map %>% filter(ID_REFA_LDA != 0) %>%
+  arrange(desc(avg_val)) %>%
+  head(20)
+
+ggplot(map)+
+  geom_sf(aes(size=avg_val),color="red")+
+  scale_size_area(max_size = 4)+
+  coord_sf(xlim = c(645000, 657500), ylim = c(6857800, 6867200))+
+  geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 3, nudge_y = 0.01) # TODO: Position du text a ajuster
