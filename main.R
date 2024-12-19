@@ -3,6 +3,8 @@ library(sf)
 library(ggplot2)
 library(dplyr)
 
+Sys.setlocale("LC_TIME", "English")
+
 val_2018_S1 <- read_delim("data/2018_S1_NB_FER.txt", delim = "\t")
 val_2018_S2 <- read_delim("data/2018_S2_NB_Fer.txt", delim = "\t")
 val_2023_S1 <- read_delim("data/2023_S1_NB_FER.txt", delim = "\t")
@@ -19,21 +21,20 @@ summary(val_2023_S1)
 validations <- rbind(val_2023_S1, val_2018_S1, val_2018_S2)
 summary(validations)
 
+# Convertir la colonne JOUR en type Date si ce n'est pas déjà fait
+validations$JOUR <- as.Date(validations$JOUR, format = "%d/%m/%Y")
+
 nom_arret <- geo_data %>% st_drop_geometry() %>%
   group_by(idrefa_lda) %>%
   summarise(nom_lda = first(nom_lda)) %>%
   select(idrefa_lda, nom_lda)
 
-# Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
-centroid_lda <- geo_data %>%
-  group_by(idrefa_lda) %>%
-  summarise(geometry = st_union(geometry)) %>%
-  st_centroid()
-
-
 total_val_lda <- validations %>% group_by(ID_REFA_LDA) %>%
   summarise(total_val = sum(NB_VALD)) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda"))
+
+
+## STAT stations
 
 # TOP 20 of LDA
 total_val_lda %>% filter(ID_REFA_LDA != 0) %>%
@@ -47,6 +48,12 @@ total_val_lda %>% filter(ID_REFA_LDA != 0) %>%
        x = "Nom LDA",
        y = "Nombre de validations")
 
+## MAP
+# Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
+centroid_lda <- geo_data %>%
+  group_by(idrefa_lda) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  st_centroid()
 
 # TODO : MAP -> ajouter un fond !!
 # map of avg validation per day per LDA
@@ -72,3 +79,70 @@ ggplot(map)+
   scale_size_area(max_size = 4)+
   coord_sf(xlim = c(645000, 657500), ylim = c(6857800, 6867200))+
   geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 3, nudge_y = 0.01) # TODO: Position du text a ajuster
+
+## STAT temps
+
+# histogram over year (pas intéressant)
+validations %>%
+  group_by(JOUR) %>%
+  summarise(total_val = sum(NB_VALD)) %>%
+  ggplot(aes(x = JOUR, y = total_val)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Validation par jour",
+       x = "Jour",
+       y = "Nombre de validations")
+
+# histogram validation moyenne par jour de la semaine
+# colonne jour de la semaine
+week_val <- validations %>%
+  mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE))
+
+# moyenne par jour de la semaine
+avg_validation_per_day <- week_val %>%
+  group_by(day_of_week) %>%
+  summarise(avg_val = mean(NB_VALD))
+
+avg_validation_per_day$day_of_week <- factor(avg_validation_per_day$day_of_week,
+                                             levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+ggplot(avg_validation_per_day, aes(x = day_of_week, y = avg_val)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = "Validation moyenne par jour de la semaine",
+       x = "Jour de la semaine",
+       y = "Nombre moyen de validations")
+
+# On vois qu'a disney la chutte du weekend est moins importante
+disney <- validations %>% filter(ID_REFA_LDA == 68385) %>%
+  mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
+  group_by(day_of_week) %>%
+  summarise(avg_val = mean(NB_VALD))
+
+disney$day_of_week <- factor(disney$day_of_week,
+                             levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+ggplot(disney, aes(x = day_of_week, y = avg_val)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    labs(title = "Validation moyenne par jour de la semaine a Disney",
+         x = "Jour de la semaine",
+         y = "Nombre moyen de validations")
+
+# moyenne par mois
+month_val <- validations %>%
+  mutate(month = months(JOUR, abbreviate = TRUE))
+
+avg_validation_per_month <- month_val %>%
+    group_by(month) %>%
+    summarise(avg_val = mean(NB_VALD))
+
+avg_validation_per_month$month <- factor(avg_validation_per_month$month,
+                                         levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+ggplot(avg_validation_per_month, aes(x = month, y = avg_val)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    labs(title = "Validation moyenne par mois",
+         x = "Mois",
+         y = "Nombre moyen de validations")
