@@ -146,3 +146,66 @@ ggplot(avg_validation_per_month, aes(x = month, y = avg_val)) +
     labs(title = "Validation moyenne par mois",
          x = "Mois",
          y = "Nombre moyen de validations")
+
+
+# Différence du nombre de validation en fonction du type des titres
+validations %>%
+  group_by(CATEGORIE_TITRE) %>%
+  summarise(total_val = sum(NB_VALD)) %>%
+  ggplot(aes(x = reorder(CATEGORIE_TITRE, total_val), y = total_val)) +
+  geom_bar(stat = "identity") +
+  coord_flip() +
+  theme_minimal() +
+  labs(title = "Validation par type de titre",
+       x = "Type de titre",
+       y = "Nombre de validations")
+
+# Différence du nombre de validation en fonction du type des titres par mois -> pas très intéressant
+# Grosse baisse de validation en aout mais de Septembre a Decembre ont ne retrouve pas les valeurs de Janvier a Juillet
+# TST -> Tarification Solidarité Transport
+# FGT -> Forfait Gratuité Transport
+# NAVIGO -> Forfait Navigo (annuel, mensuel, semaine)
+# IMAGINE R -> Forfait Imagine R (etudiant + scolaire)
+# Amethyste -> Forfait Amethyste (personne agée)
+# Navigo jour -> Forfait Navigo jour
+# AUTRE + ? + NON DEFINI -> Autre
+
+validations %>% group_by(CATEGORIE_TITRE) %>%
+  summarise(total_val = sum(NB_VALD))
+
+validation_type_per_month = validations %>%
+  mutate(month = months(JOUR, abbreviate = TRUE)) %>%
+  group_by(CATEGORIE_TITRE, month) %>%
+  summarise(total_val = sum(NB_VALD))
+
+validation_type_per_month$month <- factor(validation_type_per_month$month,
+                                           levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+ validation_type_per_month %>% ggplot(aes(x = month, y = total_val, fill = CATEGORIE_TITRE)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+ scale_fill_brewer(palette = "Set3") +
+  labs(title = "Validation par type de titre par mois",
+       x = "Mois",
+       y = "Nombre de validations",
+       fill = "Type de titre")
+
+# Différence du nombre de validation en fonction du type des titres par jour de la semaine -> pas très intéressant
+# Les validations sont plus importantes en semaine (normal) mais on ne voit pas de différence entre les types de titre
+validation_type_per_day = validations %>%
+  mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
+  group_by(CATEGORIE_TITRE, day_of_week) %>%
+  summarise(total_val = sum(NB_VALD))
+
+validation_type_per_day$day_of_week <- factor(validation_type_per_day$day_of_week,
+                                              levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+validation_type_per_day %>% ggplot(aes(x = day_of_week, y = total_val, fill = CATEGORIE_TITRE)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    theme_minimal() +
+    scale_fill_brewer(palette = "Set3") +
+    labs(title = "Validation par type de titre par jour de la semaine",
+         x = "Jour de la semaine",
+         y = "Nombre de validations",
+         fill = "Type de titre")
+
