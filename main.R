@@ -247,17 +247,15 @@ vacances_zone_B_C <- data.frame(
 )
 
 # Fonction pour vérifier si une date est pendant les vacances en zone B ou C
-is_vacances_B_C <- function(date) {
-  any(sapply(1:nrow(vacances_zone_B_C), function(i) date >= vacances_zone_B_C$start[i] & date <= vacances_zone_B_C$end[i]))
+is_vacances_B_C <- function(dates) {
+  apply(sapply(dates, function(d) d >= vacances_zone_B_C$start & d <= vacances_zone_B_C$end), 2, any)
 }
 
-
-validations_ile_de_france <- validations %>% # Possiblement très long...
+validations_ile_de_france <- validations %>%
   mutate(
-    period = ifelse(sapply(JOUR, is_vacances_B_C), "Vacances", "Normal"),
-    month = months(JOUR, abbreviate = TRUE)  # Mois abrégé
+    period = ifelse(is_vacances_B_C(JOUR), "Vacances", "Normal"),
+    month = months(JOUR, abbreviate = TRUE)
   )
-
 
 validation_per_month_ile_de_france <- validations_ile_de_france %>%
   group_by(month, period) %>%
