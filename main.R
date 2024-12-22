@@ -241,45 +241,43 @@ validation_type_per_day %>% ggplot(aes(x = day_of_week, y = total_val, fill = CA
 
 
 library(lubridate)
-
-# Définir les périodes de vacances scolaires
-vacances <- data.frame(
-  start = as.Date(c("2018-10-20", "2018-12-22", "2019-02-09", "2019-04-06", "2019-07-06")),
-  end = as.Date(c("2018-11-04", "2019-01-06", "2019-03-10", "2019-05-05", "2019-09-01"))
+vacances_zone_B_C <- data.frame(
+  start = as.Date(c("2018-10-20", "2018-12-22", "2018-02-10", "2018-04-07", "2018-07-07")),
+  end = as.Date(c("2018-11-04", "2018-12-31", "2018-02-25", "2018-04-22", "2018-09-03"))
 )
 
-# Fonction pour vérifier si une date est pendant les vacances
-is_vacances <- function(date) {
-  any(sapply(1:nrow(vacances), function(i) date >= vacances$start[i] & date <= vacances$end[i]))
+# Fonction pour vérifier si une date est pendant les vacances en zone B ou C
+is_vacances_B_C <- function(date) {
+  any(sapply(1:nrow(vacances_zone_B_C), function(i) date >= vacances_zone_B_C$start[i] & date <= vacances_zone_B_C$end[i]))
 }
 
-# Ajouter une colonne vacances/non-vacances
-validations <- validations %>%
+
+validations_ile_de_france <- validations %>% # Possiblement très long...
   mutate(
-    period = ifelse(sapply(JOUR, is_vacances), "Vacances", "Scolaire"),
-    month = months(JOUR, abbreviate = TRUE)
+    period = ifelse(sapply(JOUR, is_vacances_B_C), "Vacances", "Normal"),
+    month = months(JOUR, abbreviate = TRUE)  # Mois abrégé
   )
 
-# Grouper par mois et période (vacances ou scolaire)
-validation_per_month <- validations %>%
+
+validation_per_month_ile_de_france <- validations_ile_de_france %>%
   group_by(month, period) %>%
   summarise(total_val = sum(NB_VALD)) %>%
   ungroup()
 
-# Ordre des mois pour l'affichage
-validation_per_month$month <- factor(validation_per_month$month,
-                                     levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+validation_per_month_ile_de_france$month <- factor(validation_per_month_ile_de_france$month,
+                                                   levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
 
-# Création du graphique
-validation_per_month %>%
+validation_per_month_ile_de_france %>%
   ggplot(aes(x = month, y = total_val, fill = period)) +
-  geom_bar(stat = "identity", position = "dodge") +
+  geom_bar(stat = "identity", position = "stack") +
   theme_minimal() +
   labs(
-    title = "Validation par mois et par période scolaire",
+    title = "Validation par mois et par période scolaire (Île-de-France - 2018)",
     x = "Mois",
     y = "Nombre de validations",
     fill = "Période"
   )
+
+
 
