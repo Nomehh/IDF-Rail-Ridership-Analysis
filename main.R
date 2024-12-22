@@ -24,12 +24,14 @@ summary(validations)
 # Convertir la colonne JOUR en type Date si ce n'est pas déjà fait
 validations$JOUR <- as.Date(validations$JOUR, format = "%d/%m/%Y")
 
-nom_arret <- geo_data %>% st_drop_geometry() %>%
+nom_arret <- geo_data %>%
+  st_drop_geometry() %>%
   group_by(idrefa_lda) %>%
   summarise(nom_lda = first(nom_lda)) %>%
   select(idrefa_lda, nom_lda)
 
-total_val_lda <- validations %>% group_by(ID_REFA_LDA) %>%
+total_val_lda <- validations %>%
+  group_by(ID_REFA_LDA) %>%
   summarise(total_val = sum(NB_VALD)) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda"))
 
@@ -37,16 +39,19 @@ total_val_lda <- validations %>% group_by(ID_REFA_LDA) %>%
 ## STAT stations
 
 # TOP 20 of LDA
-total_val_lda %>% filter(ID_REFA_LDA != 0) %>%
+total_val_lda %>%
+  filter(ID_REFA_LDA != 0) %>%
   arrange(desc(total_val)) %>%
   head(20) %>%
   ggplot(aes(x = reorder(nom_lda, total_val), y = total_val)) +
   geom_bar(stat = "identity") +
   coord_flip() +
   theme_minimal() +
-  labs(title = "Validation par LDA",
-       x = "Nom LDA",
-       y = "Nombre de validations")
+  labs(
+    title = "Validation par LDA",
+    x = "Nom LDA",
+    y = "Nombre de validations"
+  )
 
 ## MAP
 # Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
@@ -57,27 +62,31 @@ centroid_lda <- geo_data %>%
 
 # TODO : MAP -> ajouter un fond !!
 # map of avg validation per day per LDA
-day_avg_val_lda <- validations %>% group_by(ID_REFA_LDA, JOUR) %>%
+day_avg_val_lda <- validations %>%
+  group_by(ID_REFA_LDA, JOUR) %>%
   summarise(total_val = sum(NB_VALD)) %>% # TOTAL de validation par LDA par jour (car LDA = plusieurs arrêts)
   group_by(ID_REFA_LDA) %>%
   summarise(avg_val = mean(total_val)) # Moyenne de validation par LDA
 
-map = day_avg_val_lda %>%
+map <- day_avg_val_lda %>%
   left_join(centroid_lda, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   st_as_sf()
 
-ggplot(map)+geom_sf(aes(size=avg_val),color="red")+scale_size_area(max_size = 4)
+ggplot(map) +
+  geom_sf(aes(size = avg_val), color = "red") +
+  scale_size_area(max_size = 4)
 
 # zoom on Paris
-map_name_top = map %>% filter(ID_REFA_LDA != 0) %>%
+map_name_top <- map %>%
+  filter(ID_REFA_LDA != 0) %>%
   arrange(desc(avg_val)) %>%
   head(20)
 
-ggplot(map)+
-  geom_sf(aes(size=avg_val),color="red")+
-  scale_size_area(max_size = 4)+
-  coord_sf(xlim = c(645000, 657500), ylim = c(6857800, 6867200))+
+ggplot(map) +
+  geom_sf(aes(size = avg_val), color = "red") +
+  scale_size_area(max_size = 4) +
+  coord_sf(xlim = c(645000, 657500), ylim = c(6857800, 6867200)) +
   geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 3, nudge_y = 0.01) # TODO: Position du text a ajuster
 
 ## STAT temps
@@ -89,9 +98,11 @@ validations %>%
   ggplot(aes(x = JOUR, y = total_val)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
-  labs(title = "Validation par jour",
-       x = "Jour",
-       y = "Nombre de validations")
+  labs(
+    title = "Validation par jour",
+    x = "Jour",
+    y = "Nombre de validations"
+  )
 
 # histogram validation moyenne par jour de la semaine
 # colonne jour de la semaine
@@ -104,48 +115,58 @@ avg_validation_per_day <- week_val %>%
   summarise(avg_val = mean(NB_VALD))
 
 avg_validation_per_day$day_of_week <- factor(avg_validation_per_day$day_of_week,
-                                             levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+)
 
 ggplot(avg_validation_per_day, aes(x = day_of_week, y = avg_val)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
-  labs(title = "Validation moyenne par jour de la semaine",
-       x = "Jour de la semaine",
-       y = "Nombre moyen de validations")
+  labs(
+    title = "Validation moyenne par jour de la semaine",
+    x = "Jour de la semaine",
+    y = "Nombre moyen de validations"
+  )
 
 # On vois qu'a disney la chutte du weekend est moins importante
-disney <- validations %>% filter(ID_REFA_LDA == 68385) %>%
+disney <- validations %>%
+  filter(ID_REFA_LDA == 68385) %>%
   mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
   group_by(day_of_week) %>%
   summarise(avg_val = mean(NB_VALD))
 
 disney$day_of_week <- factor(disney$day_of_week,
-                             levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+)
 
 ggplot(disney, aes(x = day_of_week, y = avg_val)) +
-    geom_bar(stat = "identity") +
-    theme_minimal() +
-    labs(title = "Validation moyenne par jour de la semaine a Disney",
-         x = "Jour de la semaine",
-         y = "Nombre moyen de validations")
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(
+    title = "Validation moyenne par jour de la semaine a Disney",
+    x = "Jour de la semaine",
+    y = "Nombre moyen de validations"
+  )
 
 # moyenne par mois
 month_val <- validations %>%
   mutate(month = months(JOUR, abbreviate = TRUE))
 
 avg_validation_per_month <- month_val %>%
-    group_by(month) %>%
-    summarise(avg_val = mean(NB_VALD))
+  group_by(month) %>%
+  summarise(avg_val = mean(NB_VALD))
 
 avg_validation_per_month$month <- factor(avg_validation_per_month$month,
-                                         levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+)
 
 ggplot(avg_validation_per_month, aes(x = month, y = avg_val)) +
-    geom_bar(stat = "identity") +
-    theme_minimal() +
-    labs(title = "Validation moyenne par mois",
-         x = "Mois",
-         y = "Nombre moyen de validations")
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(
+    title = "Validation moyenne par mois",
+    x = "Mois",
+    y = "Nombre moyen de validations"
+  )
 
 
 # Différence du nombre de validation en fonction du type des titres
@@ -156,12 +177,14 @@ validations %>%
   geom_bar(stat = "identity") +
   coord_flip() +
   theme_minimal() +
-  labs(title = "Validation par type de titre",
-       x = "Type de titre",
-       y = "Nombre de validations")
+  labs(
+    title = "Validation par type de titre",
+    x = "Type de titre",
+    y = "Nombre de validations"
+  )
 
 # Différence du nombre de validation en fonction du type des titres par mois -> pas très intéressant
-# Grosse baisse de validation en aout mais de Septembre a Decembre ont ne retrouve pas les valeurs de Janvier a Juillet
+# Grosse baisse de validation en aout mais de Septembre a Decembre ont ne retrouve pas les valeurs de Janvier a Juillet ??
 # TST -> Tarification Solidarité Transport
 # FGT -> Forfait Gratuité Transport
 # NAVIGO -> Forfait Navigo (annuel, mensuel, semaine)
@@ -170,42 +193,93 @@ validations %>%
 # Navigo jour -> Forfait Navigo jour
 # AUTRE + ? + NON DEFINI -> Autre
 
-validations %>% group_by(CATEGORIE_TITRE) %>%
+validations %>%
+  group_by(CATEGORIE_TITRE) %>%
   summarise(total_val = sum(NB_VALD))
 
-validation_type_per_month = validations %>%
+validation_type_per_month <- validations %>%
   mutate(month = months(JOUR, abbreviate = TRUE)) %>%
   group_by(CATEGORIE_TITRE, month) %>%
   summarise(total_val = sum(NB_VALD))
 
 validation_type_per_month$month <- factor(validation_type_per_month$month,
-                                           levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+)
 
- validation_type_per_month %>% ggplot(aes(x = month, y = total_val, fill = CATEGORIE_TITRE)) +
+validation_type_per_month %>% ggplot(aes(x = month, y = total_val, fill = CATEGORIE_TITRE)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
- scale_fill_brewer(palette = "Set3") +
-  labs(title = "Validation par type de titre par mois",
-       x = "Mois",
-       y = "Nombre de validations",
-       fill = "Type de titre")
+  scale_fill_brewer(palette = "Set3") +
+  labs(
+    title = "Validation par type de titre par mois",
+    x = "Mois",
+    y = "Nombre de validations",
+    fill = "Type de titre"
+  )
 
 # Différence du nombre de validation en fonction du type des titres par jour de la semaine -> pas très intéressant
 # Les validations sont plus importantes en semaine (normal) mais on ne voit pas de différence entre les types de titre
-validation_type_per_day = validations %>%
+validation_type_per_day <- validations %>%
   mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
   group_by(CATEGORIE_TITRE, day_of_week) %>%
   summarise(total_val = sum(NB_VALD))
 
 validation_type_per_day$day_of_week <- factor(validation_type_per_day$day_of_week,
-                                              levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+)
 
 validation_type_per_day %>% ggplot(aes(x = day_of_week, y = total_val, fill = CATEGORIE_TITRE)) +
-    geom_bar(stat = "identity", position = "dodge") +
-    theme_minimal() +
-    scale_fill_brewer(palette = "Set3") +
-    labs(title = "Validation par type de titre par jour de la semaine",
-         x = "Jour de la semaine",
-         y = "Nombre de validations",
-         fill = "Type de titre")
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(
+    title = "Validation par type de titre par jour de la semaine",
+    x = "Jour de la semaine",
+    y = "Nombre de validations",
+    fill = "Type de titre"
+  )
+
+
+library(lubridate)
+
+# Définir les périodes de vacances scolaires
+vacances <- data.frame(
+  start = as.Date(c("2018-10-20", "2018-12-22", "2019-02-09", "2019-04-06", "2019-07-06")),
+  end = as.Date(c("2018-11-04", "2019-01-06", "2019-03-10", "2019-05-05", "2019-09-01"))
+)
+
+# Fonction pour vérifier si une date est pendant les vacances
+is_vacances <- function(date) {
+  any(sapply(1:nrow(vacances), function(i) date >= vacances$start[i] & date <= vacances$end[i]))
+}
+
+# Ajouter une colonne vacances/non-vacances
+validations <- validations %>%
+  mutate(
+    period = ifelse(sapply(JOUR, is_vacances), "Vacances", "Scolaire"),
+    month = months(JOUR, abbreviate = TRUE)
+  )
+
+# Grouper par mois et période (vacances ou scolaire)
+validation_per_month <- validations %>%
+  group_by(month, period) %>%
+  summarise(total_val = sum(NB_VALD)) %>%
+  ungroup()
+
+# Ordre des mois pour l'affichage
+validation_per_month$month <- factor(validation_per_month$month,
+                                     levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                                                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+# Création du graphique
+validation_per_month %>%
+  ggplot(aes(x = month, y = total_val, fill = period)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  theme_minimal() +
+  labs(
+    title = "Validation par mois et par période scolaire",
+    x = "Mois",
+    y = "Nombre de validations",
+    fill = "Période"
+  )
 
