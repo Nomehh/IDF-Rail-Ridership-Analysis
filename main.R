@@ -5,9 +5,12 @@ library(dplyr)
 
 Sys.setlocale("LC_TIME", "English")
 
+# Load data
+
 val_2018_S1 <- read_delim("data/2018_S1_NB_FER.txt", delim = "\t")
 val_2018_S2 <- read_delim("data/2018_S2_NB_Fer.txt", delim = "\t")
 val_2023_S1 <- read_delim("data/2023_S1_NB_FER.txt", delim = "\t")
+val_2023_S2 <- read_delim("data/2023_S2_NB_FER.txt", delim = "\t")
 
 geo_data <- sf::st_read("data/geo/PL_ZDL_R_13_12_2024.shp")
 
@@ -15,14 +18,31 @@ summary(val_2023_S1)
 
 # Rename lda columns of 2023 to match 2018
 colnames(val_2023_S1)[colnames(val_2023_S1) == "lda"] <- "ID_REFA_LDA"
+colnames(val_2023_S2)[colnames(val_2023_S2) == "ID_ZDC"] <- "ID_REFA_LDA"
+
 summary(val_2023_S1)
 
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Contrat Solidarit\x8e Transport"] <- "FGT"
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Autres titres"] <- "AUTRE TITRE"
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Amethyste"] <- "AMETHYSTE"
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Imagine R"] <- "IMAGINE R"
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Forfaits courts"] <- "NAVIGO JOUR"
+val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Forfait Navigo"] <- "NAVIGO"
+
 # Merge all in one table
-validations <- rbind(val_2023_S1, val_2018_S1, val_2018_S2)
+validations <- rbind(val_2023_S1, val_2018_S1, val_2018_S2, val_2023_S2)
+
+validations$CATEGORIE_TITRE[validations$CATEGORIE_TITRE == "?"] <- "AUTRE TITRE"
+validations$CATEGORIE_TITRE[validations$CATEGORIE_TITRE == "NON DEFINI"] <- "AUTRE TITRE"
+
 summary(validations)
 
 # Convertir la colonne JOUR en type Date si ce n'est pas déjà fait
 validations$JOUR <- as.Date(validations$JOUR, format = "%d/%m/%Y")
+
+# Filtrer en retirant les arrets de bus et tram
+geo_data <- geo_data %>%
+    filter(type_arret != "Arrêt de bus" & type_arret != "Arrêt de tram")
 
 nom_arret <- geo_data %>%
   st_drop_geometry() %>%
@@ -34,6 +54,10 @@ total_val_lda <- validations %>%
   group_by(ID_REFA_LDA) %>%
   summarise(total_val = sum(NB_VALD)) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda"))
+
+# supprimer les LDA inconnus (NA)
+total_val_lda <- total_val_lda %>%
+  filter(nom_lda != 'NA')
 
 ## STAT stations
 
@@ -56,10 +80,10 @@ total_val_lda %>%
 # Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
 centroid_lda <- geo_data %>%
   group_by(idrefa_lda) %>%
-  # summarise(geometry = st_union(geometry)) %>% # Long et useless?
+  summarise(geometry = st_union(geometry)) %>% # Necessaire pour avoir un seul point par LDA
   st_centroid()
 
-
+unique(geo_data$type_arret)
 
 # TODO : MAP -> ajouter un fond !!
 # map of avg validation per day per LDA
@@ -74,13 +98,13 @@ map <- day_avg_val_lda %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   st_as_sf()
 
+
 stations_map <- map %>%
-  select(avg_val, nom, geometry, type_arret) %>%
+  select(avg_val, nom_lda, geometry) %>%
   na.omit() %>%
   filter(type_arret != "Arrêt de bus") %>% # On laisse les trams?
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")
-
 
 ggplot(map) +
   geom_sf(aes(size = avg_val), color = "red") +
@@ -193,7 +217,6 @@ validations %>%
   )
 
 # Différence du nombre de validation en fonction du type des titres par mois -> pas très intéressant
-# Grosse baisse de validation en aout mais de Septembre a Decembre ont ne retrouve pas les valeurs de Janvier a Juillet ??
 # TST -> Tarification Solidarité Transport
 # FGT -> Forfait Gratuité Transport
 # NAVIGO -> Forfait Navigo (annuel, mensuel, semaine)
