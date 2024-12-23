@@ -2,6 +2,9 @@ library(readr)
 library(sf)
 library(ggplot2)
 library(dplyr)
+library(osmdata)
+library(tidyverse)
+library(beepr)
 
 Sys.setlocale("LC_TIME", "English")
 
@@ -85,7 +88,6 @@ centroid_lda <- geo_data %>%
 
 unique(geo_data$type_arret)
 
-# TODO : MAP -> ajouter un fond !!
 # map of avg validation per day per LDA
 day_avg_val_lda <- validations %>%
   group_by(ID_REFA_LDA, JOUR) %>%
@@ -115,11 +117,57 @@ map_name_top <- map %>%
   arrange(desc(avg_val)) %>%
   head(20)
 
-ggplot(map) +
-  geom_sf(aes(size = avg_val), color = "red") +
+# ville cible
+area <- "Paris, France"
+
+# récupérer les délimitation de la ville
+streets <- getbb(area) %>%
+  opq() %>%
+  add_osm_feature(key = "highway",
+                  value = c("motorway", "primary",
+                            "secondary", "tertiary")) %>%
+  osmdata_sf()
+
+# Récupérer la Seine
+river <- getbb(area) %>%
+  opq() %>%
+  add_osm_feature(key = "waterway", value = "river") %>%
+  osmdata_sf()
+
+# récupérer les petites rues
+small_streets <- getbb(area) %>%
+  opq() %>%
+  add_osm_feature(key = "highway",
+                  value = c("residential", "living_street",
+                            "pedestrian", "service")) %>%
+  osmdata_sf()
+
+# Affichage de chaque élements de la carte de Paris + les LDA
+(p <- ggplot() +
+  geom_sf(data = streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "grey",
+          size = .4,
+          alpha = .6) +
+  geom_sf(data = small_streets$osm_lines,
+          inherit.aes = FALSE,
+          color = "91939e",
+          size = .2,
+          alpha = .4) +
+  geom_sf(data = river$osm_lines,
+          inherit.aes = FALSE,
+          color = "#0062FF",
+          size = .3,
+          alpha = .8) +
+  coord_sf(xlim = c(a[1], a[3]),
+           ylim = c(a[2], a[4]),
+           expand = FALSE) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#282828")) +
+  geom_sf(data = map, aes(size = avg_val), color = "red") +
   scale_size_area(max_size = 4) +
-  coord_sf(xlim = c(645000, 657500), ylim = c(6857800, 6867200)) +
-  geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 3, nudge_y = 0.01) # TODO: Position du text a ajuster
+  coord_sf(xlim = c(2.224, 2.469), ylim = c(48.815, 48.902)) +
+geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 2.5, nudge_y = -0.003, color = "snow"))
 
 ## STAT temps
 
