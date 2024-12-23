@@ -102,7 +102,6 @@ map <- day_avg_val_lda %>%
 stations_map <- map %>%
   select(avg_val, nom_lda, geometry) %>%
   na.omit() %>%
-  filter(type_arret != "Arrêt de bus") %>% # On laisse les trams?
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")
 
