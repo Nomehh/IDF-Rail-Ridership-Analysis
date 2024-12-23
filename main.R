@@ -35,7 +35,6 @@ total_val_lda <- validations %>%
   summarise(total_val = sum(NB_VALD)) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda"))
 
-
 ## STAT stations
 
 # TOP 20 of LDA
@@ -57,8 +56,10 @@ total_val_lda %>%
 # Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
 centroid_lda <- geo_data %>%
   group_by(idrefa_lda) %>%
-  summarise(geometry = st_union(geometry)) %>%
+  # summarise(geometry = st_union(geometry)) %>% # Long et useless?
   st_centroid()
+
+
 
 # TODO : MAP -> ajouter un fond !!
 # map of avg validation per day per LDA
@@ -72,6 +73,14 @@ map <- day_avg_val_lda %>%
   left_join(centroid_lda, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   st_as_sf()
+
+stations_map <- map %>%
+  select(avg_val, nom, geometry, type_arret) %>%
+  na.omit() %>%
+  filter(type_arret != "Arrêt de bus") %>% # On laisse les trams?
+  st_as_sf()
+saveRDS(stations_map, "stations_map.rds")
+
 
 ggplot(map) +
   geom_sf(aes(size = avg_val), color = "red") +
@@ -263,8 +272,11 @@ validation_per_month_ile_de_france <- validations_ile_de_france %>%
   ungroup()
 
 validation_per_month_ile_de_france$month <- factor(validation_per_month_ile_de_france$month,
-                                                   levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                                                              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+  levels = c(
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  )
+)
 
 validation_per_month_ile_de_france %>%
   ggplot(aes(x = month, y = total_val, fill = period)) +
@@ -276,6 +288,3 @@ validation_per_month_ile_de_france %>%
     y = "Nombre de validations",
     fill = "Période"
   )
-
-
-
