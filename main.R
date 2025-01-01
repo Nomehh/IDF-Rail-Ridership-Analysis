@@ -101,8 +101,12 @@ map <- day_avg_val_lda %>%
   st_as_sf()
 
 
+# renommer la colonne nom_lda en nom
+colnames(map)[colnames(map) == "nom_lda"] <- "nom"
+
+# sauvegarder la map
 stations_map <- map %>%
-  select(avg_val, nom_lda, geometry) %>%
+  select(avg_val, nom, geometry) %>%
   na.omit() %>%
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")

@@ -48,3 +48,6 @@ cache/
 
 # Idea files
 .idea/
+
+# Mac OS X hidden files
+.DS_Store
