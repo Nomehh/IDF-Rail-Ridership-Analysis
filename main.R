@@ -111,9 +111,40 @@ stations_map <- map %>%
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")
 
-ggplot(map) +
-  geom_sf(aes(size = avg_val), color = "red") +
-  scale_size_area(max_size = 4)
+# Fréquetation des stations par jour de la semaine@
+weekly_stats <- validations %>%
+  left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
+  mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
+  group_by(nom_lda, day_of_week) %>%
+  summarise(total_val = mean(NB_VALD))
+
+weekly_stats$day_of_week <- factor(weekly_stats$day_of_week,
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+)
+
+weekly_stats <- weekly_stats %>%
+  select(nom_lda, day_of_week, total_val)
+
+saveRDS(weekly_stats, "weekly_stats.rds")
+
+# Frequentation des stations par mois
+month_stats <- validations %>%
+  left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
+  mutate(month = months(JOUR, abbreviate = TRUE)) %>%
+  group_by(nom_lda, month) %>%
+  summarise(total_val = mean(NB_VALD))
+
+month_stats$month <- factor(month_stats$month,
+  levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+)
+
+month_stats <- month_stats %>%
+  select(nom_lda, month, total_val)
+
+saveRDS(month_stats, "month_stats.rds")
+
+
+
 
 # zoom on Paris
 map_name_top <- map %>%

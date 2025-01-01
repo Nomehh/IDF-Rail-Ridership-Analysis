@@ -3,6 +3,7 @@ library(leaflet)
 library(ggplot2)
 library(dplyr)
 library(sf)
+library(gridExtra)
 
 ui <- fluidPage(
   titlePanel("IDF Railway Dashboard"),
@@ -15,7 +16,7 @@ ui <- fluidPage(
     ),
     mainPanel(
       leafletOutput("map"),
-      plotOutput("trendPlot")
+      plotOutput("trendPlot"),
     )
   )
 )
@@ -24,6 +25,9 @@ ui <- fluidPage(
 # Charger les données
 stations_map <- readRDS("../stations_map.rds")
 stations_map <- st_transform(stations_map, 4326)
+weekly_stats <- readRDS("../weekly_stats.rds")
+month_stats <- readRDS("../month_stats.rds")
+
 
 # Extraire les coordonnées des stations
 coords <- st_coordinates(stations_map)
@@ -36,6 +40,8 @@ server <- function(input, output, session) {
 
   updateSelectInput(session, "station",
                     choices = c("Toutes les stations", stations_map$nom))
+
+  print(colnames(weekly_stats))
 
   # Carte
   output$map <- renderLeaflet({
@@ -76,16 +82,36 @@ server <- function(input, output, session) {
 
   output$trendPlot <- renderPlot({
     selected_station <- selected_station_data()
-    title_text <- if (nrow(selected_station) > 1) {
-      "Tendance pour toutes les stations"
-    } else {
-      paste("Tendance pour la station :", selected_station$nom)
-    }
+    if (nrow(selected_station) > 1) {
+      title_text <- "Tendance pour toutes les stations"
 
-    ggplot(selected_station, aes(x = nom, y = avg_val)) +
-      geom_bar(stat = "identity") +
-      theme_minimal() +
-      labs(title = title_text)
+      # afficher les données weekly_stats pour toutes les stations
+      ggplot(selected_station, aes(x = nom, y = avg_val)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = title_text)
+    } else {
+
+      title_text <- paste("Tendance pour la station :", selected_station$nom)
+      # afficher les données weekly_stats pour la station sélectionnée
+      selected_station_stats_week <- weekly_stats %>%
+        filter(nom_lda == selected_station$nom)
+
+      p1 <- ggplot(selected_station_stats_week, aes(x = day_of_week, y = total_val)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = paste(title_text, "- Hebdomadaire"))
+
+      selected_station_stats_month <- month_stats %>%
+        filter(nom_lda == selected_station$nom)
+
+      p2 <- ggplot(selected_station_stats_month, aes(x = month, y = total_val)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = paste(title_text, "- Mensuel"))
+
+      gridExtra::grid.arrange(p1, p2, ncol = 2)
+    }
   })
 }
 
