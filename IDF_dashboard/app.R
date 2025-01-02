@@ -42,7 +42,7 @@ stations_map <- stations_map %>%
 server <- function(input, output, session) {
 
   updateSelectInput(session, "station",
-                    choices = c("Toutes les stations", stations_map$nom))
+                    choices = c("Toutes les stations", sort(stations_map$nom)))
 
   print(colnames(weekly_stats))
 
