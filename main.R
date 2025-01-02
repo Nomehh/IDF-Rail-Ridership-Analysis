@@ -111,7 +111,7 @@ stations_map <- map %>%
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")
 
-# Fréquetation des stations par jour de la semaine@
+# Fréquetation des stations par jour de la semaine
 weekly_stats <- validations %>%
   left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
   mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
@@ -143,7 +143,18 @@ month_stats <- month_stats %>%
 
 saveRDS(month_stats, "month_stats.rds")
 
+# Frequentation par stations pour les ensuite filtrer sur l'app
+Sum_per_lda <- validations %>%
+  left_join(nom_arret, by = c("ID_REFA_LDA" = "idrefa_lda")) %>%
+  group_by(nom_lda, JOUR) %>%
+  summarise(total_val = mean(NB_VALD))
 
+Sum_per_lda <- Sum_per_lda %>%
+  select(nom_lda, JOUR, total_val)
+
+
+
+saveRDS(Sum_per_lda, "sum_per_lda.rds")
 
 
 # zoom on Paris
