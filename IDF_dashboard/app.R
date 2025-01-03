@@ -7,7 +7,6 @@ library(gridExtra)
 
 ui <- fluidPage(
   titlePanel("IDF Railway Dashboard"),
-
   sidebarLayout(
     sidebarPanel(
       dateRangeInput("referencePeriod", "Sélectionnez la période de référence :",
@@ -17,6 +16,7 @@ ui <- fluidPage(
       selectInput("station", "Sélectionnez une station :", choices = NULL)
     ),
     mainPanel(
+      
       leafletOutput("map"),
       plotOutput("trendPlot"),
       plotOutput("comparisonPlot")
@@ -24,7 +24,9 @@ ui <- fluidPage(
   )
 )
 
-## Partie un peu crade ##
+
+Sys.setlocale("LC_TIME", "English")
+
 # Charger les données
 stations_map <- readRDS("../stations_map.rds")
 stations_map <- st_transform(stations_map, 4326)
@@ -38,13 +40,14 @@ stations_map <- stations_map %>%
   mutate(lng = coords[, 1],
          lat = coords[, 2])
 
+
+
 # Define server logic required to update map & plot based on station selection
 server <- function(input, output, session) {
+  
 
   updateSelectInput(session, "station",
                     choices = c("Toutes les stations", sort(stations_map$nom)))
-
-  print(colnames(weekly_stats))
 
   # Carte
   output$map <- renderLeaflet({
