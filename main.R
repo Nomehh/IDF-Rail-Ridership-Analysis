@@ -79,6 +79,20 @@ total_val_lda %>%
     y = "Nombre de validations"
   )
 
+top_20_lda <- total_val_lda %>%
+  filter(ID_REFA_LDA != 0) %>%
+  arrange(desc(total_val)) %>%
+  head(20) %>%
+
+saveRDS(top_20_lda, "top_20_lda.rds")
+
+
+ggplot(top_20_lda, aes(x = reorder(nom_lda, total_val), y = total_val)) +
+  geom_bar(stat = "identity") +
+  theme_minimal() +
+  labs(title = title_text, x = "Station", y = "Nombre de passagers") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
 ## MAP
 # Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
 centroid_lda <- geo_data %>%

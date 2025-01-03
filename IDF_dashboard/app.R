@@ -10,9 +10,9 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       dateRangeInput("referencePeriod", "Sélectionnez la période de référence :",
-                     start = Sys.Date() - 60, end = Sys.Date() - 30),
+                     start = "2018-01-01", end = "2018-12-31"),
       dateRangeInput("comparisonPeriod", "Sélectionnez la période de comparaison :",
-                     start = Sys.Date() - 30, end = Sys.Date()),
+                     start = "2023-01-01", end = "2023-12-31"),
       selectInput("station", "Sélectionnez une station :", choices = NULL)
     ),
     mainPanel(
@@ -33,6 +33,7 @@ stations_map <- st_transform(stations_map, 4326)
 weekly_stats <- readRDS("../weekly_stats.rds")
 month_stats <- readRDS("../month_stats.rds")
 sum_per_lda <- readRDS("../sum_per_lda.rds")
+top_20_lda <- readRDS("../top_20_lda.rds")
 
 # Extraire les coordonnées des stations
 coords <- st_coordinates(stations_map)
@@ -89,13 +90,14 @@ server <- function(input, output, session) {
   output$trendPlot <- renderPlot({
     selected_station <- selected_station_data()
     if (nrow(selected_station) > 1) {
-      title_text <- "Tendance pour toutes les stations"
+      title_text <- "Top 20 des stations d'IDF les plus fréquentées"
 
-      # afficher les données weekly_stats pour toutes les stations
-      ggplot(selected_station, aes(x = nom, y = avg_val)) +
+       ggplot(top_20_lda, aes(x = reorder(nom_lda, total_val), y = total_val)) +
         geom_bar(stat = "identity") +
         theme_minimal() +
-        labs(title = title_text)
+        labs(title = title_text, x = "Station", y = "Nombre de passagers") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
     } else {
 
       title_text <- paste("Tendance pour la station :", selected_station$nom)
