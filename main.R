@@ -205,15 +205,12 @@ small_streets <- getbb(area) %>%
           color = "#0062FF",
           size = .3,
           alpha = .8) +
-  coord_sf(xlim = c(a[1], a[3]),
-           ylim = c(a[2], a[4]),
-           expand = FALSE) +
   theme_void() +
   theme(plot.background = element_rect(fill = "#282828")) +
   geom_sf(data = map, aes(size = avg_val), color = "red") +
   scale_size_area(max_size = 4) +
   coord_sf(xlim = c(2.224, 2.469), ylim = c(48.815, 48.902)) +
-geom_sf_text(data = map_name_top, aes(label = nom_lda), size = 2.5, nudge_y = -0.003, color = "snow"))
+geom_sf_text(data = map_name_top, aes(label = nom), size = 2.5, nudge_y = -0.003, color = "snow"))
 
 ## STAT temps
 
