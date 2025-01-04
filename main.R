@@ -12,6 +12,14 @@ Sys.setlocale("LC_TIME", "English")
 
 val_2018_S1 <- read_delim("data/2018_S1_NB_FER.txt", delim = "\t")
 val_2018_S2 <- read_delim("data/2018_S2_NB_Fer.txt", delim = "\t")
+val_2019_S1 <- read_delim("data/2019_S1_NB_FER.txt", delim = "\t")
+val_2019_S2 <- read_delim("data/2019_S2_NB_FER.txt", delim = "\t")
+val_2020_S1 <- read_delim("data/2020_S1_NB_FER.txt", delim = "\t")
+val_2020_S2 <- read_delim("data/2020_S2_NB_FER.txt", delim = "\t")
+val_2021_S1 <- read_delim("data/2021_S1_NB_FER.txt", delim = "\t")
+val_2021_S2 <- read_delim("data/2021_S2_NB_FER.txt", delim = "\t")
+val_2022_S1 <- read_delim("data/2022_S1_NB_FER.txt", delim = "\t")
+val_2022_S2 <- read_delim("data/2022_S2_NB_FER.txt", delim = ";")
 val_2023_S1 <- read_delim("data/2023_S1_NB_FER.txt", delim = "\t")
 val_2023_S2 <- read_delim("data/2023_S2_NB_FER.txt", delim = "\t")
 
@@ -20,6 +28,7 @@ geo_data <- sf::st_read("data/geo/PL_ZDL_R_13_12_2024.shp")
 summary(val_2023_S1)
 
 # Rename lda columns of 2023 to match 2018
+colnames(val_2022_S2)[colnames(val_2022_S2) == "lda"] <- "ID_REFA_LDA"
 colnames(val_2023_S1)[colnames(val_2023_S1) == "lda"] <- "ID_REFA_LDA"
 colnames(val_2023_S2)[colnames(val_2023_S2) == "ID_ZDC"] <- "ID_REFA_LDA"
 
@@ -33,7 +42,7 @@ val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Forfaits courts"] <-
 val_2023_S2$CATEGORIE_TITRE[val_2023_S2$CATEGORIE_TITRE == "Forfait Navigo"] <- "NAVIGO"
 
 # Merge all in one table
-validations <- rbind(val_2023_S1, val_2018_S1, val_2018_S2, val_2023_S2)
+validations <- rbind(val_2018_S1, val_2018_S2, val_2019_S1, val_2019_S2, val_2020_S1, val_2020_S2, val_2021_S1, val_2021_S2, val_2022_S1, val_2022_S2, val_2023_S1, val_2023_S2)
 
 validations$CATEGORIE_TITRE[validations$CATEGORIE_TITRE == "?"] <- "AUTRE TITRE"
 validations$CATEGORIE_TITRE[validations$CATEGORIE_TITRE == "NON DEFINI"] <- "AUTRE TITRE"
@@ -82,7 +91,7 @@ total_val_lda %>%
 top_20_lda <- total_val_lda %>%
   filter(ID_REFA_LDA != 0) %>%
   arrange(desc(total_val)) %>%
-  head(20) %>%
+  head(20)
 
 saveRDS(top_20_lda, "top_20_lda.rds")
 
@@ -90,7 +99,7 @@ saveRDS(top_20_lda, "top_20_lda.rds")
 ggplot(top_20_lda, aes(x = reorder(nom_lda, total_val), y = total_val)) +
   geom_bar(stat = "identity") +
   theme_minimal() +
-  labs(title = title_text, x = "Station", y = "Nombre de passagers") +
+  labs(title = "Top 20", x = "Station", y = "Nombre de passagers") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ## MAP
