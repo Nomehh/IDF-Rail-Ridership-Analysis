@@ -5,6 +5,7 @@ library(dplyr)
 library(osmdata)
 library(tidyverse)
 library(beepr)
+library(lubridate)
 
 Sys.setlocale("LC_TIME", "English")
 
@@ -129,7 +130,7 @@ colnames(map)[colnames(map) == "nom_lda"] <- "nom"
 
 # sauvegarder la map
 stations_map <- map %>%
-  select(avg_val, nom, geometry) %>%
+  select(avg_val, nom, geometry, ID_REFA_LDA) %>%
   na.omit() %>%
   st_as_sf()
 saveRDS(stations_map, "stations_map.rds")
@@ -385,7 +386,7 @@ validation_type_per_day %>% ggplot(aes(x = day_of_week, y = total_val, fill = CA
   )
 
 
-library(lubridate)
+
 vacances_zone_B_C <- data.frame(
   start = as.Date(c("2018-10-20", "2018-12-22", "2018-02-10", "2018-04-07", "2018-07-07")),
   end = as.Date(c("2018-11-04", "2018-12-31", "2018-02-25", "2018-04-22", "2018-09-03"))
@@ -416,7 +417,7 @@ validation_per_month_ile_de_france$month <- factor(validation_per_month_ile_de_f
 
 validation_per_month_ile_de_france %>%
   ggplot(aes(x = month, y = total_val, fill = period)) +
-  geom_bar(stat = "identity", position = "stack") +
+  geom_bar(stat = "identity", position = "dodge") +
   theme_minimal() +
   labs(
     title = "Validation par mois et par période scolaire (Île-de-France - 2018)",
@@ -424,3 +425,19 @@ validation_per_month_ile_de_france %>%
     y = "Nombre de validations",
     fill = "Période"
   )
+
+
+
+map_val_lda <- validations %>%
+  group_by(JOUR, ID_REFA_LDA) %>%
+  summarise(VAL = sum(NB_VALD), .groups = "drop") %>%
+  na.omit() %>%
+  filter(ID_REFA_LDA != 0) %>%
+  merge(stations_map) %>%  
+  st_as_sf() %>%  
+  st_transform(4326) %>%  
+  mutate(coord = st_coordinates(.)) %>%  
+  mutate(lng = coord[, 1], lat = coord[, 2]) %>%  
+  select(-coord) 
+saveRDS(map_val_lda, "dynamic_map.rds")
+
