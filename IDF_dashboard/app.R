@@ -144,6 +144,11 @@ server <- function(input, output, session) {
         current_day <- day_counter()
 
         s <- dynamic_map %>% filter(JOUR == current_day)
+        
+        if (nrow(s) <= 0) {
+          day_counter(current_day + 1)
+          return
+        }
 
         s$normalized_VAL <- (s$VAL - min(s$VAL)) / (max(s$VAL) - min(s$VAL))
         
