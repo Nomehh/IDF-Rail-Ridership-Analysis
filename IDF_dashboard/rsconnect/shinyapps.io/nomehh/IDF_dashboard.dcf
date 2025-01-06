@@ -1,0 +1,12 @@
+name: IDF_dashboard
+title: IDF_dashboard
+username: nomehh
+account: nomehh
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13669994
+bundleId: 9611866
+url: https://nomehh.shinyapps.io/IDF_dashboard/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
