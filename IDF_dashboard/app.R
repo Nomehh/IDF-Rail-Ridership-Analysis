@@ -111,13 +111,27 @@ server <- function(input, output, session) {
   
   # MàJ de la carte en fonction de la station sélectionnée
   observe({
+
+    avg_val <- sum_per_lda %>%
+      filter(nom_lda == input$station) %>%
+      summarise(avg_val = mean(total_val)) %>%
+        pull() %>%
+        round(0)
+
     selected_station <- selected_station_data()
+
+    if (nrow(selected_station) > 1) {
+      text <- selected_station$nom
+    } else {
+        text <- selected_station$nom %>% as.character() %>% paste(" - Moyenne de voyageur par jour:", avg_val)
+    }
+
     leafletProxy("map") %>%
       clearMarkers() %>%
       addMarkers(
         lng = selected_station$lng,
         lat = selected_station$lat,
-        popup = selected_station$nom
+        popup = text
       )
   })
   
@@ -150,7 +164,7 @@ server <- function(input, output, session) {
             weight = 1
           )
         
-        updateSliderInput(session, "date_slider", value = current_day)
+          updateSliderInput(session, "date_slider", value = current_day)
         
         if (current_day < max(dynamic_map$JOUR)) {
           day_counter(current_day + 1)
