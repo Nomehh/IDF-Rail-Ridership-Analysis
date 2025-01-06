@@ -5,74 +5,77 @@ library(dplyr)
 library(sf)
 library(gridExtra)
 library(RColorBrewer)
+library(shinythemes)
 
 ui <- fluidPage(
+  theme = shinytheme("slate"),
   titlePanel("IDF Railway Dashboard"),
   
-  sidebarLayout(
-    sidebarPanel(
-      dateRangeInput("referencePeriod", "Sélectionnez la période de référence :",
-                     start = "2018-01-01", end = "2018-12-31"),
-      dateRangeInput("comparisonPeriod", "Sélectionnez la période de comparaison :",
-                     start = "2023-01-01", end = "2023-12-31"),
-      selectInput("station", "Sélectionnez une station :", choices = NULL),
-
-      checkboxInput("CompareStationToAll", "Comparaison des statiques de la station selectionner avec la moyenne de toute les stations ", value = FALSE),
+  tabsetPanel(
+    tabPanel("Carte et graphiques", 
+             sidebarLayout(
+               sidebarPanel(
+                 dateRangeInput("referencePeriod", "Sélectionnez la période de référence :", 
+                                start = "2018-01-01", end = "2018-12-31"),
+                 dateRangeInput("comparisonPeriod", "Sélectionnez la période de comparaison :", 
+                                start = "2023-01-01", end = "2023-12-31"),
+                 selectInput("station", "Sélectionnez une station :", choices = NULL),
+                 checkboxInput("CompareStationToAll", 
+                               "Comparaison des statistiques de la station sélectionnée avec la moyenne de toutes les stations", 
+                               value = FALSE)
+               ),
+               mainPanel(
+                 leafletOutput("map"),
+                 plotOutput("trendPlot"),
+                 plotOutput("comparisonPlot")
+               )
+             )
     ),
-
-    mainPanel(
-      leafletOutput("map"),
-      plotOutput("trendPlot"),
-      plotOutput("comparisonPlot")
+    tabPanel("Carte d'affluance animée", 
+             sidebarLayout(
+               sidebarPanel(
+                 checkboxInput("animateMap", "Activer l'animation de la carte", value = TRUE),
+                 sliderInput("date_slider", "Sélectionnez la date :", 
+                             min = as.Date("2018-01-01"), max = as.Date("2023-12-31"), 
+                             value = as.Date("2018-01-01"), timeFormat = "%Y-%m-%d")
+               ),
+               mainPanel(
+                 leafletOutput("map2")
+               )
+             )
     )
-  ),
-  
-  sidebarLayout(
-    sidebarPanel(
-      checkboxInput("animateMap", "Activer l'animation de la carte", value = TRUE),
-      sliderInput("date_slider", "Sélectionnez la date :", 
-                  min = as.Date("2018-01-01"), max = as.Date("2023-12-31"), 
-                  value = as.Date("2018-01-01"), timeFormat = "%Y-%m-%d")
-    ),
-    mainPanel(
-      leafletOutput("map2"),
-    )
-  ),
-  
-  tags$head(
-    tags$style(HTML("
-      #map2 {
-        margin-bottom: 30px;  /* Adds margin at the bottom of map2 */
-      }
-    "))
   )
 )
 
-Sys.setlocale("LC_TIME", "English")
 
-# Charger les données
-stations_map <- readRDS("../stations_map.rds")
-stations_map <- st_transform(stations_map, 4326)
-weekly_stats <- readRDS("../weekly_stats.rds")
-month_stats <- readRDS("../month_stats.rds")
-sum_per_lda <- readRDS("../sum_per_lda.rds")
-top_20_lda <- readRDS("../top_20_lda.rds")
-dynamic_map <- readRDS("../dynamic_map.rds")
 
-# Extraire les coordonnées des stations
-coords <- st_coordinates(stations_map)
-stations_map <- stations_map %>%
-  mutate(lng = coords[, 1],
-         lat = coords[, 2])
 
 # Define server logic required to update map & plot based on station selection
 server <- function(input, output, session) {
+  
+  Sys.setlocale("LC_TIME", "English")
+  
+  # Charger les données
+  stations_map <- readRDS("./objects/stations_map.rds")
+  stations_map <- st_transform(stations_map, 4326)
+  weekly_stats <- readRDS("./objects/weekly_stats.rds")
+  month_stats <- readRDS("./objects/month_stats.rds")
+  sum_per_lda <- readRDS("./objects/sum_per_lda.rds")
+  top_20_lda <- readRDS("./objects/top_20_lda.rds")
+  dynamic_map <- readRDS("./objects/dynamic_map.rds")
+  
+  # Extraire les coordonnées des stations
+  coords <- st_coordinates(stations_map)
+  stations_map <- stations_map %>%
+    mutate(lng = coords[, 1],
+           lat = coords[, 2])
   
   updateSelectInput(session, "station",
                     choices = c("Toutes les stations", sort(stations_map$nom)))
   
   day_counter <- reactiveVal(min(dynamic_map$JOUR)) 
   
+
   # Carte avec toutes les stations
   output$map <- renderLeaflet({
     leaflet(stations_map) %>%
@@ -192,10 +195,20 @@ server <- function(input, output, session) {
       title_text <- "Top 20 des stations d'IDF les plus fréquentées"
       
       ggplot(top_20_lda, aes(x = reorder(nom_lda, total_val), y = total_val)) +
-        geom_bar(stat = "identity") +
+        geom_bar(stat = "identity", fill = "#1e90ff", color = "#4682b4") +  
         theme_minimal() +
         labs(title = title_text, x = "Station", y = "Nombre de passagers") +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          panel.grid.major = element_line(color = "gray40"),             
+          panel.grid.minor = element_line(color = "gray30"),             
+          text = element_text(color = "white"),                         
+          axis.text = element_text(color = "white"),                   
+          axis.title = element_text(color = "white"),                   
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
+          axis.text.x = element_text(angle = 45, hjust = 1)             
+        )
       
     } else {
       if (input$CompareStationToAll) {
@@ -225,7 +238,17 @@ server <- function(input, output, session) {
         p1 <- ggplot(comparison_data, aes(x = day_of_week, y = total_val, fill = diff)) +
           geom_bar(stat = "identity", position = "dodge") +
           theme_minimal() +
-          labs(title = paste(title_text, "par semaine"), x = "Jour de la semaine", y = "Nombre de passagers")
+          labs(title = paste(title_text, "par semaine"), x = "Jour de la semaine", y = "Nombre de passagers") +
+          theme(
+            plot.background = element_rect(fill = "#272b30", color = NA),  
+            panel.background = element_rect(fill = "#272b30", color = NA), 
+            panel.grid.major = element_line(color = "gray40"),             
+            panel.grid.minor = element_line(color = "gray30"),             
+            text = element_text(color = "white"),                         
+            axis.text = element_text(color = "white"),                   
+            axis.title = element_text(color = "white"),                   
+            plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5)
+          )
 
 
         # Month part
@@ -254,7 +277,18 @@ server <- function(input, output, session) {
         p2 <- ggplot(comparison_data_month, aes(x = month, y = total_val, fill = diff)) +
           geom_bar(stat = "identity", position = "dodge") +
           theme_minimal() +
-          labs(title = paste(title_text, "par mois"), x = "Mois", y = "Nombre de passagers")
+          labs(title = paste(title_text, "par mois"), x = "Mois", y = "Nombre de passagers") +
+          theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          panel.grid.major = element_line(color = "gray40"),             
+          panel.grid.minor = element_line(color = "gray30"),             
+          text = element_text(color = "white"),                         
+          axis.text = element_text(color = "white"),                   
+          axis.title = element_text(color = "white"),                   
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
+          axis.text.x = element_text(angle = 45, hjust = 1)             
+        )
 
 
         gridExtra::grid.arrange(p1, p2, ncol = 2)
@@ -265,17 +299,40 @@ server <- function(input, output, session) {
         filter(nom_lda == selected_station$nom)
 
       p1 <- ggplot(selected_station_stats_week, aes(x = day_of_week, y = total_val)) +
-        geom_bar(stat = "identity") +
+        geom_bar(stat = "identity", fill = "#1e90ff", color = "#4682b4") +  
         theme_minimal() +
-        labs(title = paste(title_text, "- Hebdomadaire"), x = "Jour de la semaine", y = "Nombre de passagers")
+        labs(title = paste(title_text, "- Hebdomadaire"), x = "Jour de la semaine", y = "Nombre de passagers") + 
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          panel.grid.major = element_line(color = "gray40"),             
+          panel.grid.minor = element_line(color = "gray30"),             
+          text = element_text(color = "white"),                         
+          axis.text = element_text(color = "white"),                   
+          axis.title = element_text(color = "white"),                   
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
+          axis.text.x = element_text(angle = 45, hjust = 1)             
+        )
+      
 
       selected_station_stats_month <- month_stats %>%
         filter(nom_lda == selected_station$nom)
 
       p2 <- ggplot(selected_station_stats_month, aes(x = month, y = total_val)) +
-        geom_bar(stat = "identity") +
+        geom_bar(stat = "identity", fill = "#1e90ff", color = "#4682b4") +  
         theme_minimal() +
-        labs(title = paste(title_text, "- Mensuel"), x = "Mois", y = "Nombre de passagers")
+        labs(title = paste(title_text, "- Mensuel"), x = "Mois", y = "Nombre de passagers") + 
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          panel.grid.major = element_line(color = "gray40"),             
+          panel.grid.minor = element_line(color = "gray30"),             
+          text = element_text(color = "white"),                         
+          axis.text = element_text(color = "white"),                   
+          axis.title = element_text(color = "white"),                   
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
+          axis.text.x = element_text(angle = 45, hjust = 1)             
+        )
 
       gridExtra::grid.arrange(p1, p2, ncol = 2)
       }
@@ -284,48 +341,67 @@ server <- function(input, output, session) {
   
   output$comparisonPlot <- renderPlot({
     if (nrow(selected_station_data()) > 1) {
-      return()
+      ggplot() +
+        theme_minimal() +
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          text = element_text(color = "white"),
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5)
+        ) +
+        labs(title = "Sélectionnez une station pour comparer", x = "", y = "") 
+    } else {
+      selected_station <- selected_station_data()
+      
+      filter_lda <- sum_per_lda %>%
+        filter(nom_lda == selected_station$nom)
+      
+      reference_data <- filter_lda %>%
+        filter(JOUR >= as.Date(input$referencePeriod[1]) & JOUR <= as.Date(input$referencePeriod[2]))
+      
+      comparison_data <- filter_lda %>%
+        filter(JOUR >= as.Date(input$comparisonPeriod[1]) & JOUR <= as.Date(input$comparisonPeriod[2]))
+      
+      reference_data <- reference_data %>%
+        mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
+        group_by(day_of_week) %>%
+        summarise(total_val = mean(total_val))
+      
+      comparison_data <- comparison_data %>%
+        mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
+        group_by(day_of_week) %>%
+        summarise(total_val = mean(total_val))
+      
+      reference_data$day_of_week <- factor(reference_data$day_of_week,
+                                           levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+      
+      comparison_data$day_of_week <- factor(comparison_data$day_of_week,
+                                            levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+      
+      # ajout d'une colonne pour différencier les deux périodes
+      reference_data$period <- input$referencePeriod[1] %>% as.character() %>% paste(" - ", input$referencePeriod[2])
+      comparison_data$period <- input$comparisonPeriod[1] %>% as.character() %>% paste(" - ", input$comparisonPeriod[2])
+      
+      # concatenation des deux dataframes
+      comparison_data <- rbind(reference_data, comparison_data)
+      
+      # HISTOGRAMME AVEC deux barres pour chaque période (référence et comparaison)
+      ggplot(comparison_data, aes(x = day_of_week, y = total_val, fill = period)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        theme_minimal() +
+        labs(title = paste("Comparaison entre les périodes de référence et de comparaison pour la station :", selected_station$nom), x = "Jour de la semaine", y = "Nombre de passagers") + 
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          panel.grid.major = element_line(color = "gray40"),             
+          panel.grid.minor = element_line(color = "gray30"),           
+          text = element_text(color = "white"),                         
+          axis.text = element_text(color = "white"),                  
+          axis.title = element_text(color = "white"),                  
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
+          axis.text.x = element_text(angle = 45, hjust = 1)             
+        )
     }
-    selected_station <- selected_station_data()
-    
-    filter_lda <- sum_per_lda %>%
-      filter(nom_lda == selected_station$nom)
-    
-    reference_data <- filter_lda %>%
-      filter(JOUR >= as.Date(input$referencePeriod[1]) & JOUR <= as.Date(input$referencePeriod[2]))
-    
-    comparison_data <- filter_lda %>%
-      filter(JOUR >= as.Date(input$comparisonPeriod[1]) & JOUR <= as.Date(input$comparisonPeriod[2]))
-    
-    reference_data <- reference_data %>%
-      mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
-      group_by(day_of_week) %>%
-      summarise(total_val = mean(total_val))
-    
-    comparison_data <- comparison_data %>%
-      mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
-      group_by(day_of_week) %>%
-      summarise(total_val = mean(total_val))
-    
-    reference_data$day_of_week <- factor(reference_data$day_of_week,
-                                         levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
-    
-    comparison_data$day_of_week <- factor(comparison_data$day_of_week,
-                                          levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
-    
-    # ajout d'une colonne pour différencier les deux périodes
-    reference_data$period <- input$referencePeriod[1] %>% as.character() %>% paste(" - ", input$referencePeriod[2])
-    comparison_data$period <- input$comparisonPeriod[1] %>% as.character() %>% paste(" - ", input$comparisonPeriod[2])
-    
-    # concatenation des deux dataframes
-    comparison_data <- rbind(reference_data, comparison_data)
-    
-    # HISTOGRAMME AVEC deux bar pour chaque données (reference et comparison)
-    ggplot(comparison_data, aes(x = day_of_week, y = total_val, fill = period)) +
-      geom_bar(stat = "identity", position = "dodge") +
-      theme_minimal() +
-      labs(title = paste("Comparaison entre les périodes de référence et de comparaison pour la station :", selected_station$nom), x = "Jour de la semaine", y = "Nombre de passagers")
-    
   })
 }
 
