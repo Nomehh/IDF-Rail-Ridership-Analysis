@@ -16,7 +16,10 @@ ui <- fluidPage(
       dateRangeInput("comparisonPeriod", "Sélectionnez la période de comparaison :",
                      start = "2023-01-01", end = "2023-12-31"),
       selectInput("station", "Sélectionnez une station :", choices = NULL),
+
+      checkboxInput("CompareStationToAll", "Comparaison des statiques de la station selectionner avec la moyenne de toute les stations ", value = FALSE),
     ),
+
     mainPanel(
       leafletOutput("map"),
       plotOutput("trendPlot"),
@@ -176,26 +179,87 @@ server <- function(input, output, session) {
         theme(axis.text.x = element_text(angle = 45, hjust = 1))
       
     } else {
-      
-      title_text <- paste("Tendance pour la station :", selected_station$nom)
+      if (input$CompareStationToAll) {
+        title_text <- paste("Comparaison de la station :", selected_station$nom, "avec la moyenne de toutes les stations")
+
+        selected_station_stats_week <- weekly_stats %>%
+          filter(nom_lda == selected_station$nom)
+
+        all_stations_stats_week <- weekly_stats %>%
+            group_by(day_of_week) %>%
+            summarise(total_val = mean(total_val))
+
+        selected_station_stats_week$day_of_week <- factor(selected_station_stats_week$day_of_week,
+                                         levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+        all_stations_stats_week$day_of_week <- factor(all_stations_stats_week$day_of_week,
+                                          levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+
+        # ajout d'une colonne pour différencier les deux df
+        selected_station_stats_week$diff <- "Stations sélectionnée"
+        all_stations_stats_week$diff <- "Toutes les stations"
+
+        # concatenation des deux dataframes
+        comparison_data <- rbind(selected_station_stats_week, all_stations_stats_week)
+
+        p1 <- ggplot(comparison_data, aes(x = day_of_week, y = total_val, fill = diff)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          theme_minimal() +
+          labs(title = paste(title_text, "par semaine"), x = "Jour de la semaine", y = "Nombre de passagers")
+
+
+        # Month part
+
+        selected_station_stats_month <- month_stats %>%
+          filter(nom_lda == selected_station$nom)
+
+        all_stations_stats_month <- month_stats %>%
+            group_by(month) %>%
+            summarise(total_val = mean(total_val))
+
+        selected_station_stats_month$month <- factor(selected_station_stats_month$month,
+                                         levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+        all_stations_stats_month$month <- factor(all_stations_stats_month$month,
+                                          levels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
+
+
+        # ajout d'une colonne pour différencier les deux df
+        selected_station_stats_month$diff <- "Stations sélectionnée"
+        all_stations_stats_month$diff <- "Toutes les stations"
+
+        # concatenation des deux dataframes
+        comparison_data_month <- rbind(selected_station_stats_month, all_stations_stats_month)
+
+        p2 <- ggplot(comparison_data_month, aes(x = month, y = total_val, fill = diff)) +
+          geom_bar(stat = "identity", position = "dodge") +
+          theme_minimal() +
+          labs(title = paste(title_text, "par mois"), x = "Mois", y = "Nombre de passagers")
+
+
+        gridExtra::grid.arrange(p1, p2, ncol = 2)
+      } else {
+          title_text <- paste("Tendance pour la station :", selected_station$nom)
       # afficher les données weekly_stats pour la station sélectionnée
       selected_station_stats_week <- weekly_stats %>%
         filter(nom_lda == selected_station$nom)
-      
+
       p1 <- ggplot(selected_station_stats_week, aes(x = day_of_week, y = total_val)) +
         geom_bar(stat = "identity") +
         theme_minimal() +
         labs(title = paste(title_text, "- Hebdomadaire"), x = "Jour de la semaine", y = "Nombre de passagers")
-      
+
       selected_station_stats_month <- month_stats %>%
         filter(nom_lda == selected_station$nom)
-      
+
       p2 <- ggplot(selected_station_stats_month, aes(x = month, y = total_val)) +
         geom_bar(stat = "identity") +
         theme_minimal() +
         labs(title = paste(title_text, "- Mensuel"), x = "Mois", y = "Nombre de passagers")
-      
+
       gridExtra::grid.arrange(p1, p2, ncol = 2)
+      }
     }
   })
   
