@@ -41,7 +41,7 @@ cache/
 *.log
 
 # Quarto files
-*.qmd
+#*.qmd
 
 # RStudio project files
 *.Rproj

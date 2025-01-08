@@ -1,0 +1,41 @@
+---
+title: "Analyzing and Visualizing Ridership Patterns in Île-de-France Rail Network"
+output: html_document
+author: "ATTIG Léo, PERRIOT Matthieu, SAUTIER Sébastien, TREMELLAT Alexis"
+date: "8 Janvier 2025"
+---
+
+## Project Overview
+
+In this data analysis project, we delve into the ridership data of Île-de-France's railway stations spanning the years 2018 to 2023. The primary objective is to analyze and visualize the ridership patterns, creating a dashboard that allows stakeholders to monitor and compare ridership against the norm. The analysis specifically focuses on discerning variations from a typical week, distinguishing between regular weeks and holiday periods.
+
+## Methodology
+
+### 1. Data Collection and Cleaning
+
+The data used for this study were sourced from the STIF open data portal. The datasets include daily validations per stop point for the first semester of 2023, historical validations from 2015 to 2022, and geographical data for stop locations. The data were gathered and compiled for the specified period starting from 2018-01-01. The cleaning process involved handling missing values, outliers, and inconsistencies. The dataset was aggregated at the "Zone d'arrêt" level defined by the `ID_REFA_LDA` feature, and geographical data about their locations were collected. A reproducible R script `cleaning.R` was provided to document all the cleaning steps.
+
+### 2. Exploratory Data Analysis (EDA)
+
+Exploratory analysis was conducted to identify overall trends and patterns in ridership. This included exploring seasonality, monthly trends, and potential outliers affecting the data.
+
+### 3. Dashboard Development using Shiny
+
+An interactive dashboard was built using the Shiny framework in R. The dashboard includes key visualizations describing overall attendance trends, weekly and monthly variations, and comparisons with the norm. Users can select a reference period and a comparison period, providing meaningful figures to highlight differences between the two selected periods, based on the day of the week. The dashboard also allows users to quickly select stations of interest using a web map, and provides key statistics on the current trend of these stations.
+A second tab shows a graphical evolution of the 20 largest stations in terms of visitor numbers.
+
+### 4. Statistical Methods
+
+A REMPLIR
+
+## Key Findings
+
+### Evolution of Ridership
+
+The analysis revealed significant trends in ridership on the Ile-de-France rail network over the 2018-2023 period. The main observations are as follows:
+
+- **Overall trends**: A significant increase in ridership was observed from 2018 to 2019, followed by a sharp drop in 2020 due to the COVID-19 pandemic. Attendance returned to the abnormal in 2021 and continued to rise until 2023.
+- **Seasonal variations** : School vacations have a real impact on visitor numbers at certain resorts, such as “Lagny Thorigny”, which experiences a big drop in August. Some resorts are less affected by school vacations, such as “Marne-la-vallée Chessy”, thanks to its proximity to Disneyland-Paris.
+- **Weekly variations** : Weekday ridership has always been higher than weekend ridership. We note a slight drop on Mondays and Fridays, especially for the “La Défense” station, as we can imagine that with the arrival of telecommuting, the preferred days are Mondays and Fridays.
+The “Marne-la-vallée Chessy” station sees a less significant drop at weekends, again thanks to the Disneyland Paris park, which welcomes tourists all year round, most of whom have to come by public transport.
+- **Impact of public holidays** : A REMPLIR
