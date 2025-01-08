@@ -188,7 +188,7 @@ server <- function(input, output, session) {
             color = ~pal(normalized_VAL),  
             fillColor = ~pal(normalized_VAL),
             fillOpacity = 0.7,
-            popup = ~paste("Valeur:", VAL, "<br>Date:", JOUR),
+            popup = ~paste("Nombre de validations:", VAL, "<br>Date:", JOUR),
             stroke = FALSE,
             opacity = 0.8,
             weight = 1

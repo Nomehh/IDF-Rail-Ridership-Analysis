@@ -66,7 +66,7 @@ top_20_lda <- total_val_lda %>%
 # Sauvegarde
 saveRDS(top_20_lda, "top_20_lda.rds")
 
-# Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SA MERE)
+# Agréger les géométries des arrêts par LDA et calculer le centroïde (LONG SI PEU DE RAM)
 centroid_lda <- geo_data %>%
   group_by(idrefa_lda) %>%
   summarise(geometry = st_union(geometry)) %>% # Necessaire pour avoir un seul point par LDA
