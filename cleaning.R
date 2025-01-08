@@ -157,3 +157,26 @@ map_val_lda <- validations %>%
   select(-coord)
 
 saveRDS(map_val_lda, "dynamic_map.rds")
+
+
+
+### Générer les graphes du rapport
+
+# Graphe chronologique par mois
+monthly_ridership <- monthly_ridership %>%
+  mutate(year_month = paste(month, year, sep = "_"))
+saveRDS(monthly_ridership, "doc_monthly_ridership.rds")
+
+# Comparaison saisonnière entre Lagny et Disney
+stations_of_interest <- c("Lagny - Thorigny", "Marne-la-Vallée Chessy")
+
+seasonal_comparison <- month_stats %>%
+  filter(nom_lda %in% stations_of_interest)
+saveRDS(seasonal_comparison, "doc_seasonal_comparison.rds")
+
+# Fréquentation des stations en semaine
+stations_of_interest <- c("La Défense", "Marne-la-Vallée Chessy")
+
+weekly_frequentation <- weekly_stats %>%
+  filter(nom_lda %in% stations_of_interest)
+saveRDS(weekly_frequentation, "doc_weekly_frequentation.rds")
