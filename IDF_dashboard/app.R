@@ -22,7 +22,8 @@ ui <- fluidPage(
                  selectInput("station", "Sélectionnez une station :", choices = NULL),
                  checkboxInput("CompareStationToAll", 
                                "Comparaison des statistiques de la station sélectionnée avec la moyenne de toutes les stations", 
-                               value = FALSE)
+                               value = FALSE),
+                 plotOutput("holidaysOrNot")
                ),
                mainPanel(
                  leafletOutput("map"),
@@ -31,7 +32,7 @@ ui <- fluidPage(
                )
              )
     ),
-    tabPanel("Carte d'affluance animée", 
+    tabPanel("Carte d'affluence animée", 
              sidebarLayout(
                sidebarPanel(
                  checkboxInput("animateMap", "Activer l'animation de la carte", value = TRUE),
@@ -47,8 +48,29 @@ ui <- fluidPage(
   )
 )
 
+vacances_zone_B_C <- data.frame(
+  start = as.Date(c(
+    "2018-01-01", "2018-02-10", "2018-04-07", "2018-07-07", "2018-10-20", "2018-12-22", # 2018
+    "2019-01-01", "2019-02-23", "2019-04-20", "2019-07-06", "2019-10-19", "2019-12-21", # 2019
+    "2020-01-01", "2020-02-22", "2020-04-18", "2020-07-04", "2020-10-17", "2020-12-19", # 2020
+    "2021-01-01", "2021-02-20", "2021-04-17", "2021-07-03", "2021-10-23", "2021-12-18", # 2021
+    "2022-01-01", "2022-02-19", "2022-04-16", "2022-07-02", "2022-10-22", "2022-12-17", # 2022
+    "2023-01-01", "2023-02-18", "2023-04-15", "2023-07-01", "2023-10-21", "2023-12-23"  # 2023
+  )),
+  end = as.Date(c(
+    "2018-01-07", "2018-02-25", "2018-04-22", "2018-09-02", "2018-11-04", "2018-12-31", # 2018
+    "2019-01-06", "2019-03-10", "2019-05-05", "2019-09-01", "2019-11-03", "2019-12-31", # 2019
+    "2020-01-06", "2020-03-08", "2020-05-03", "2020-08-30", "2020-11-01", "2020-12-31", # 2020
+    "2021-01-03", "2021-03-07", "2021-05-02", "2021-08-29", "2021-11-07", "2021-12-31", # 2021
+    "2022-01-02", "2022-03-06", "2022-05-01", "2022-08-28", "2022-11-06", "2022-12-31", # 2022
+    "2023-01-02", "2023-03-05", "2023-04-30", "2023-08-27", "2023-11-05", "2023-12-31"  # 2023
+  ))
+)
 
-
+# Fonction pour vérifier si une date est pendant les vacances en zone B ou C
+is_vacances_B_C <- function(dates) {
+  apply(sapply(dates, function(d) d >= vacances_zone_B_C$start & d <= vacances_zone_B_C$end), 2, any)
+}
 
 # Define server logic required to update map & plot based on station selection
 server <- function(input, output, session) {
@@ -401,6 +423,60 @@ server <- function(input, output, session) {
           plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5), 
           axis.text.x = element_text(angle = 45, hjust = 1)             
         )
+    }
+  })
+
+  output$holidaysOrNot <- renderPlot({
+    if (nrow(selected_station_data()) > 1) {
+      ggplot() +
+        theme_minimal() +
+        theme(
+          plot.background = element_rect(fill = "#272b30", color = NA),  
+          panel.background = element_rect(fill = "#272b30", color = NA), 
+          text = element_text(color = "white"),
+          plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5)
+        ) +
+        labs(title = "Sélectionnez une station pour afficher l'affluence", x = "", y = "") 
+    } else {
+      selected_station <- selected_station_data()
+
+      filter_lda <- sum_per_lda %>%
+      filter(nom_lda == selected_station$nom)
+
+      # Transformation des données pour inclure les périodes vacances/scolaires
+      comparison_data <- filter_lda %>%
+      mutate(
+        day_of_week = weekdays(JOUR, abbreviate = TRUE),
+        period_type = ifelse(is_vacances_B_C(JOUR), "Vacances", "Ouvrable")
+      ) %>%
+      group_by(day_of_week, period_type) %>%
+      summarise(total_val = mean(total_val), .groups = "drop")
+
+      # Ordre des jours de la semaine
+      comparison_data$day_of_week <- factor(comparison_data$day_of_week,
+        levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+      # Histogramme avec deux barres pour chaque jour de la semaine : vacances vs semaines de cours
+      ggplot(comparison_data, aes(x = day_of_week, y = total_val, fill = period_type)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      theme_minimal() +
+      labs(
+        title = paste("Affluence en semaine de vacances/ouvrable"),
+        x = "Jour de la semaine",
+        y = "Nombre de passagers",
+        fill = "Période"
+      ) + 
+      theme(
+        plot.background = element_rect(fill = "#272b30", color = NA),
+        panel.background = element_rect(fill = "#272b30", color = NA),
+        panel.grid.major = element_line(color = "gray40"),
+        panel.grid.minor = element_line(color = "gray30"),
+        text = element_text(color = "white"),
+        axis.text = element_text(color = "white"),
+        axis.title = element_text(color = "white"),
+        plot.title = element_text(size = 16, face = "bold", color = "white", hjust = 0.5),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
     }
   })
 }
