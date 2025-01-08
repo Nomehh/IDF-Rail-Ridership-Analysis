@@ -9,6 +9,10 @@ date: "8 Janvier 2025"
 
 In this data analysis project, we delve into the ridership data of Île-de-France's railway stations spanning the years 2018 to 2023. The primary objective is to analyze and visualize the ridership patterns, creating a dashboard that allows stakeholders to monitor and compare ridership against the norm. The analysis specifically focuses on discerning variations from a typical week, distinguishing between regular weeks and holiday periods.
 
+You can explore the application online at the following address: [Île-de-France Dashboard](https://nomehh.shinyapps.io/IDF_dashboard/).
+
+Or run the app locally with : `shiny::runApp('IDF_dashboard')`
+
 ## Methodology
 
 ### 1. Data Collection and Cleaning
@@ -29,7 +33,7 @@ A second tab shows a graphical evolution of the 20 largest stations in terms of 
 
 This project employed several statistical approaches to analyze station ridership data. Below is a summary of the key methods used in the analysis:
 
-- **Aggregation and Average Calculation**
+-   **Aggregation and Average Calculation**
 
 The code aggregates ridership data by day and "Zone d'arrêt" (LDA) and calculates the average number of validations for each LDA. This helps in analyzing the daily average trends.
 
@@ -43,7 +47,7 @@ day_avg_val_lda <- validations %>%
   summarise(avg_val = mean(total_val), .groups = "drop")
 ```
 
-- **Weekly Analysis**
+-   **Weekly Analysis**
 
 Ridership data is analyzed by the day of the week, which helps identify specific weekly variations.
 
@@ -56,7 +60,7 @@ weekly_stats <- validations %>%
   summarise(total_val = mean(NB_VALD), .groups = "drop")
 ```
 
-- **Monthly Analysis**
+-   **Monthly Analysis**
 
 Ridership data is also grouped by month to observe seasonal trends, such as decreases in the summer or increases during winter.
 
@@ -67,7 +71,7 @@ month_stats <- validations %>%
   summarise(total_val = mean(NB_VALD), .groups = "drop")
 ```
 
-- **Centroids for Mapping**
+-   **Centroids for Mapping**
 
 Centroids of the "Zones d'arrêt" polygons are calculated to get coordinates for train stations.
 
@@ -83,15 +87,17 @@ centroid_lda <- geo_data %>%
 ### Evolution of Ridership
 
 The following analysis needs this importations to be executed:
+
 ```{r}
 library(ggplot2)
 monthly_ridership <- readRDS("./IDF_dashboard/objects/doc_monthly_ridership.rds")
 seasonal_comparison <- readRDS("./IDF_dashboard/objects/doc_seasonal_comparison.rds")
 weekly_frequentation <- readRDS("./IDF_dashboard/objects/doc_weekly_frequentation.rds")
 ```
+
 The analysis revealed significant trends in ridership on the Ile-de-France rail network over the 2018-2023 period. The main observations are as follows:
 
-- **Overall trends**: A significant increase in ridership was observed from 2018 to 2019, followed by a sharp drop in 2020 due to the COVID-19 pandemic. Attendance returned to the abnormal in 2021 and continued to rise until 2023.
+-   **Overall trends**: A significant increase in ridership was observed from 2018 to 2019, followed by a sharp drop in 2020 due to the COVID-19 pandemic. Attendance returned to the abnormal in 2021 and continued to rise until 2023.
 
 ```{r}
 ggplot(monthly_ridership, aes(x = year_month, y = total_val, fill = factor(year))) +
@@ -106,7 +112,7 @@ ggplot(monthly_ridership, aes(x = year_month, y = total_val, fill = factor(year)
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
 ```
 
-- **Seasonal variations** : School vacations have a real impact on visitor numbers at certain resorts, such as “Lagny Thorigny”, which experiences a big drop in August. Some resorts are less affected by school vacations, such as “Marne-la-vallée Chessy”, thanks to its proximity to Disneyland-Paris.
+-   **Seasonal variations** : School vacations have a real impact on visitor numbers at certain resorts, such as “Lagny Thorigny”, which experiences a big drop in August. Some resorts are less affected by school vacations, such as “Marne-la-vallée Chessy”, thanks to its proximity to Disneyland-Paris.
 
 ```{r}
 ggplot(seasonal_comparison, aes(x = month, y = total_val, fill = nom_lda)) +
@@ -121,8 +127,7 @@ ggplot(seasonal_comparison, aes(x = month, y = total_val, fill = nom_lda)) +
   facet_wrap(~nom_lda, scales = "free_y")
 ```
 
-- **Weekly variations** : Weekday ridership has always been higher than weekend ridership. We note a slight drop on Mondays and Fridays, especially for the “La Défense” station, as we can imagine that with the arrival of telecommuting, the preferred days are Mondays and Fridays.
-The “Marne-la-vallée Chessy” station sees a less significant drop at weekends, again thanks to the Disneyland Paris park, which welcomes tourists all year round, most of whom have to come by public transport.
+-   **Weekly variations** : Weekday ridership has always been higher than weekend ridership. We note a slight drop on Mondays and Fridays, especially for the “La Défense” station, as we can imagine that with the arrival of telecommuting, the preferred days are Mondays and Fridays. The “Marne-la-vallée Chessy” station sees a less significant drop at weekends, again thanks to the Disneyland Paris park, which welcomes tourists all year round, most of whom have to come by public transport.
 
 ```{r}
 ggplot(weekly_frequentation, aes(x = day_of_week, y = total_val, fill = nom_lda)) +
