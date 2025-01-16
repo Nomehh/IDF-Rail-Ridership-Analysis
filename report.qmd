@@ -5,6 +5,13 @@ author: "ATTIG Léo, PERRIOT Matthieu, SAUTIER Sébastien, TREMELLAT Alexis"
 date: "8 Janvier 2025"
 ---
 
+```{r}
+library(ggplot2)
+monthly_ridership <- readRDS("./IDF_dashboard/objects/doc_monthly_ridership.rds")
+seasonal_comparison <- readRDS("./IDF_dashboard/objects/doc_seasonal_comparison.rds")
+weekly_frequentation <- readRDS("./IDF_dashboard/objects/doc_weekly_frequentation.rds")
+```
+
 ## Project Overview
 
 In this data analysis project, we delve into the ridership data of Île-de-France's railway stations spanning the years 2018 to 2023. The primary objective is to analyze and visualize the ridership patterns, creating a dashboard that allows stakeholders to monitor and compare ridership against the norm. The analysis specifically focuses on discerning variations from a typical week, distinguishing between regular weeks and holiday periods.
@@ -39,7 +46,7 @@ The code aggregates ridership data by day and "Zone d'arrêt" (LDA) and calculat
 
 Aggregating and averaging data is crucial for smoothing daily fluctuations and identifying overall trends.
 
-```{r}
+```r
 day_avg_val_lda <- validations %>%
   group_by(ID_REFA_LDA, JOUR) %>%
   summarise(total_val = sum(NB_VALD), .groups = "drop") %>%
@@ -53,7 +60,7 @@ Ridership data is analyzed by the day of the week, which helps identify specific
 
 Weekly analysis is useful for understanding user behavior on different days, revealing patterns like decreased ridership on weekends or peak usage during weekdays.
 
-```{r}
+```r
 weekly_stats <- validations %>%
   mutate(day_of_week = weekdays(JOUR, abbreviate = TRUE)) %>%
   group_by(nom_lda, day_of_week) %>%
@@ -64,7 +71,7 @@ weekly_stats <- validations %>%
 
 Ridership data is also grouped by month to observe seasonal trends, such as decreases in the summer or increases during winter.
 
-```{r}
+```r
 month_stats <- validations %>%
   mutate(month = months(JOUR, abbreviate = TRUE)) %>%
   group_by(nom_lda, month) %>%
@@ -75,7 +82,7 @@ month_stats <- validations %>%
 
 Centroids of the "Zones d'arrêt" polygons are calculated to get coordinates for train stations.
 
-```{r}
+```r
 centroid_lda <- geo_data %>%
   group_by(idrefa_lda) %>%
   summarise(geometry = st_union(geometry)) %>%
@@ -85,15 +92,6 @@ centroid_lda <- geo_data %>%
 ## Key Findings
 
 ### Evolution of Ridership
-
-The following analysis needs this importations to be executed:
-
-```{r}
-library(ggplot2)
-monthly_ridership <- readRDS("./IDF_dashboard/objects/doc_monthly_ridership.rds")
-seasonal_comparison <- readRDS("./IDF_dashboard/objects/doc_seasonal_comparison.rds")
-weekly_frequentation <- readRDS("./IDF_dashboard/objects/doc_weekly_frequentation.rds")
-```
 
 The analysis revealed significant trends in ridership on the Ile-de-France rail network over the 2018-2023 period. The main observations are as follows:
 
